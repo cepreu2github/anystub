@@ -10,10 +10,13 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -43,6 +46,7 @@ import static java.sql.Types.VARCHAR;
 public class ResultSetUtil {
 
     private static final Logger LOGGER = Logger.getLogger("ResultSetUtil");
+    private static final NumberFormat NUMBER_CONVERTER = NumberFormat.getInstance(Locale.US);
 
     private ResultSetUtil() {
 
@@ -144,7 +148,11 @@ public class ResultSetUtil {
                 for (int i = 0; i < columnCount; i++) {
                     String next = it.next();
                     Object item;
-                    item = decodeValue(next, decodedValueTypes.get(i));
+                    try {
+                        item = decodeValue(next, decodedValueTypes.get(i));
+                    } catch (ParseException e) {
+                        throw new IllegalArgumentException(e);
+                    }
                     row.add(item);
                     if (doubleColumnIndexes.contains(i)) {
                         row.add(item);
@@ -162,18 +170,18 @@ public class ResultSetUtil {
 //            case  BIT = -7;
                 case TINYINT:
                 case SMALLINT:
-                    return String.valueOf(resultSet.getShort(column));
+                    return NUMBER_CONVERTER.format(resultSet.getShort(column));
                 case INTEGER:
-                    return String.valueOf(resultSet.getInt(column));
+                    return NUMBER_CONVERTER.format(resultSet.getInt(column));
                 case BIGINT:
                     return resultSet.getBigDecimal(column).toString();
                 case FLOAT:
-                    return String.valueOf(resultSet.getFloat(column));
+                    return NUMBER_CONVERTER.format(resultSet.getFloat(column));
                 case NUMERIC:
                 case DECIMAL:
                 case REAL:
                 case DOUBLE:
-                    return String.valueOf(resultSet.getDouble(column));
+                    return NUMBER_CONVERTER.format(resultSet.getDouble(column));
                 case CHAR:
                 case VARCHAR:
                 case LONGVARCHAR:
@@ -222,7 +230,7 @@ public class ResultSetUtil {
         }
     }
 
-    private static Object decodeValue(String next, int columnType) {
+    private static Object decodeValue(String next, int columnType) throws ParseException {
         if (next == null) {
             return null;
         }
@@ -230,18 +238,18 @@ public class ResultSetUtil {
 //            case  BIT = -7;
             case TINYINT:
             case SMALLINT:
-                return Short.valueOf(next);
+                return NUMBER_CONVERTER.parse(next);
             case INTEGER:
-                return Integer.valueOf(next);
+                return NUMBER_CONVERTER.parse(next);
             case BIGINT:
                 return new BigInteger(next);
             case FLOAT:
-                return Float.valueOf(next);
+                return NUMBER_CONVERTER.parse(next);
             case NUMERIC:
             case DECIMAL:
             case REAL:
             case DOUBLE:
-                return Double.valueOf(next);
+                return NUMBER_CONVERTER.parse(next);
             case CHAR:
             case VARCHAR:
             case LONGVARCHAR:
